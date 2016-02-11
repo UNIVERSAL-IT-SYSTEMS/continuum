@@ -1,0 +1,28 @@
+<configuration>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%level] [%date{ISO8601}] [%logger]: %msg%n</pattern>
+            <!-- %X{akkaSource} -->
+        </encoder>
+    </appender>
+
+    <!--<appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>continuum-test.log</file>
+        <append>false</append>
+
+        <encoder>
+            <pattern>[%date{ISO8601}] %-5level %logger{26} [%X{akkaSource}] - %msg%n</pattern>
+        </encoder>
+
+    </appender>-->
+
+    <root level="INFO">
+        <appender-ref ref="console" />
+    </root>
+
+    <logger name="com.tuplejump" level="DEBUG"/>
+    <logger name="org.apache.zookeeper.server.PrepRequestProcessor" level="ERROR"/>
+    <logger name="org.apache.zookeeper.ZooKeeper" level="WARN"/>
+    <logger name="org.apache.zookeeper.ClientCnxn" level="WARN"/>
+</configuration>
