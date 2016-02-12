@@ -1,0 +1,6 @@
+package examples
+
+object KafkaSample {
+
+
+}

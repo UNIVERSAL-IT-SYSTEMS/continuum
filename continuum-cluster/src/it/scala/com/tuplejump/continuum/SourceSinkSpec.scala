@@ -44,9 +44,9 @@ class SourceSinkSpec extends AbstractSpec with Assertions {
       val batches = 10
       val size = 1000
 
-      val sink = cluster.sink(settings.consumerConfig, topics, consumers.ref).await
+      val sink = cluster.sink(settings.consumerConfig, topics, consumers.ref)
 
-      val source = cluster.source(settings.producerConfig).await
+      val source = cluster.source(settings.producerConfig)
 
       val task = system.scheduler.schedule(Duration.Zero, 1.seconds) {
         val data = for (n <- 0 until size) yield s"message-test-$n"

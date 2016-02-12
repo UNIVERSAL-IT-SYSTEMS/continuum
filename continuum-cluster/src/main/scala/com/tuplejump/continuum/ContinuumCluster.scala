@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.util.Timeout
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import akka.actor._
 import akka.event.Logging
 
@@ -55,11 +55,11 @@ class ContinuumCluster(val system: ExtendedActorSystem) extends Extension { exte
   /** You only need to create one instance unless you want > 1, each with differing configuration or
     * for example, different levels of security. It is defined for now by a function vs val.
     */
-  def source(config: Map[String,String]): Future[ActorRef] =
-    (guardian ? ClusterEvents.CreateSource(config)).mapTo[ActorRef]
+  def source(config: Map[String,String]): ActorRef =
+    Await.result((guardian ? ClusterEvents.CreateSource(config)).mapTo[ActorRef], timeout.duration)
 
-  def sink(config: Map[String,String], topics: List[String], consumers: ActorRef*): Future[ActorRef] =
-    (guardian ? ClusterEvents.CreateSink(config, topics, consumers.toSeq)).mapTo[ActorRef]
+  def sink(config: Map[String,String], topics: List[String], consumers: ActorRef*): ActorRef =
+    Await.result((guardian ? ClusterEvents.CreateSink(config, topics, consumers.toSeq)).mapTo[ActorRef], timeout.duration)
 
   private def terminate(): Future[Terminated] =
     system.terminate()

@@ -10,7 +10,7 @@ object Build extends sbt.Build {
     id = "root",
     base = file("."),
     settings = Settings.parentSettings,
-    aggregate = List(testkit, cqrs, core, cluster)// later: analytics, api)
+    aggregate = List(testkit, cqrs, core, cluster, examples)// later: analytics, api)
   )
 
   lazy val testkit = LibraryProject("testkit", Dependencies.testkit)
@@ -26,6 +26,8 @@ object Build extends sbt.Build {
   lazy val analytics = AssembledProject("analytics", Dependencies.analytics)
 
   lazy val api = AssembledProject("api", Dependencies.api)
+
+  lazy val examples = AssembledProject("examples", Dependencies.cluster)
 
   def AssembledProject(name: String, deps: Seq[ModuleID]): Project =
     Project(
