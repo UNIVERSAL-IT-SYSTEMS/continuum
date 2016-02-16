@@ -27,22 +27,18 @@ object KafkaSink {
 /** TODO pattern. Send to router for round robin or allow user to set any actors for distribution.
   * TODO supervision for error handling.
   * TODO types */
-class KafkaSink(config: Map[String,java.lang.Object], topics: List[String], consumers: Seq[ActorRef]) extends Actor with ActorLogging {
+class KafkaSink(config: Map[String,java.lang.Object], topics: List[String], consumers: Seq[ActorRef]) extends KafkaActor {
 
   import context.dispatcher
   import org.apache.kafka.clients.consumer.KafkaConsumer
 
   private val consumer = new KafkaConsumer[String, String](config.asJava)
-  log.info("Subscribing to topics {}", topics)
-  consumer.subscribe(topics.asJava)
 
-  val task = context.system.scheduler.schedule(Duration.Zero, 1.seconds) {
-    val record = consumer.poll(100)
-    val data = record.iterator().asScala.map(_.value).toList
-    if (data.nonEmpty) {
-      log.info(s"Received offset[{}], partitions[{}], data[{}]", record.count(), record.partitions(), data)
-      self ! data.mkString(",")//todo the type handling, send to consumers here or not.
-    }
+  consumer.subscribe(topics.asJava)
+  log.info("Subscribed to topics {}", topics)
+
+  val task = context.system.scheduler.schedule(3.seconds, 1.seconds) {
+    self ! ScheduledTasks.Tick
   }
 
   override def postStop(): Unit = {
@@ -52,19 +48,22 @@ class KafkaSink(config: Map[String,java.lang.Object], topics: List[String], cons
     super.postStop()
   }
 
-  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
-    log.error(reason, s"Failure $message")
-    super.preRestart(reason, message)
-  }
-
   def receive: Actor.Receive = {
-    case e: String => distribute(e)
+    case ScheduledTasks.Tick => poll()
   }
 
-  private def distribute(e: String): Unit = {
-    //entirely dependent upon a distribution pattern set by the user - all TODO
-    //e.g. round robin, balancing pool, balancing group, smallest mailbox, hash...
-    //for today, just broadcasting
-    consumers foreach (_ ! e)
+  /** Will be dependent upon a distribution pattern set by the user -...... TODO
+    * for today, just broadcasting.
+    */
+  private def poll(): Unit = {
+    val record = consumer.poll(1000)
+
+    val data = record.iterator().asScala.map(_.value).toList
+
+    log.info(s"Received offset[{}], partitions[{}], data[{}]", record.count(), record.partitions(), data)
+    if (data.nonEmpty) {
+      consumers foreach (_ ! data.mkString(","))
+      //todo the type handling, send to consumers here or not.
+    }
   }
 }

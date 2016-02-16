@@ -3,7 +3,7 @@ package com.tuplejump.continuum
 import scala.util.Random
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
-import com.tuplejump.embedded.kafka.{Assertions, EmbeddedKafka}
+import com.tuplejump.embedded.kafka.EmbeddedKafka
 
 class SourceSinkSpec extends AbstractSpec with Assertions {
 
@@ -11,28 +11,28 @@ class SourceSinkSpec extends AbstractSpec with Assertions {
 
   val topics = List(random.nextInt.toString)
 
-  val kafka = new EmbeddedKafka()
+  val embedded = new EmbeddedKafka()
 
   implicit val system: ActorSystem = ActorSystem("test")
 
-  val cluster = ContinuumCluster(system)
+  val kafka = Kafka(system)
 
-  val settings = cluster.settings
+  val settings = kafka.settings
 
   //TODO LBR of actors
   val consumers = TestProbe()
 
   override def beforeAll(): Unit = {
-    kafka.isRunning should be (false)
-    kafka.start()
-    eventually(10000, 100)(assert(kafka.isRunning, "Kafka must be running."))
-    topics foreach (kafka.createTopic(_, 1, 1))
+    embedded.isRunning should be (false)
+    embedded.start()
+    await(10000, 100)(assert(embedded.isRunning, "Kafka must be running."))
+    topics foreach (embedded.createTopic(_, 1, 1))
   }
 
   override def afterAll(): Unit = {
     system.terminate()
-    eventually(5000, 5000)(assert(system.whenTerminated.isCompleted, "System should be shutdown."))
-    kafka.shutdown()
+    await(5000, 5000)(assert(system.whenTerminated.isCompleted, "System should be shutdown."))
+    embedded.shutdown()
   }
 
   "Initial" must {
@@ -44,22 +44,23 @@ class SourceSinkSpec extends AbstractSpec with Assertions {
       val batches = 10
       val size = 1000
 
-      val sink = cluster.sink(settings.consumerConfig, topics, consumers.ref)
+      val sink = kafka.sink(topics, consumers.ref)
 
-      val source = cluster.source(settings.producerConfig)
+      val source = kafka.source()
 
       val task = system.scheduler.schedule(Duration.Zero, 1.seconds) {
         val data = for (n <- 0 until size) yield s"message-test-$n"
-        cluster.log.info("Publishing {} messages.", data.size)
-        //just one for now
+        kafka.log.info("Publishing {} messages.", data.size)
+
+        //TODO: just one for now, serializer for type vs just string
         for (to <- topics.headOption) {
-          source ! SourceEvent(to, data.mkString(","))//TODO serializer for type vs just string
+          source ! Commands.Log(to, data.mkString(","))
         }
       }
 
       val series = consumers.receiveWhile(max = 6000.millis, messages = size * batches) {
         case e: String =>
-          cluster.log.info("Consumer received [{}]", e)
+          kafka.log.info("Consumer received [{}]", e)
           val received = e.split(",").toList
           received.size should be (size)
           received

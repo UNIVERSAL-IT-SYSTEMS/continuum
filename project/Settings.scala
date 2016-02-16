@@ -16,7 +16,7 @@ import scoverage.ScoverageKeys
 
 object Settings extends sbt.Build {
 
-  val projectName = "continuum"
+  scalaVersion := Version.Scala
 
   lazy val buildSettings = Seq(
 
@@ -35,8 +35,6 @@ object Settings extends sbt.Build {
             <name>Helena Edelson</name>
           </developer>
         </developers>,
-
-    scalaVersion := Version.Scala,
 
     HeaderPlugin.autoImport.headers := Map(
       "scala" -> Apache2_0("2016", "Tuplejump"),
@@ -61,6 +59,8 @@ object Settings extends sbt.Build {
   lazy val parentSettings = buildSettings ++ dirs
 
   lazy val common = buildSettings ++ dirs ++ testSettings ++ styleSettings ++ Seq(
+
+    scalaVersion := Version.Scala,
 
     cancelable in Global := true,
 

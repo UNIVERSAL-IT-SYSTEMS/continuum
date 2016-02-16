@@ -27,12 +27,13 @@ object Build extends sbt.Build {
 
   lazy val api = AssembledProject("api", Dependencies.api)
 
-  lazy val examples = AssembledProject("examples", Dependencies.cluster)
+  lazy val examples = AssembledProject("examples", Dependencies.examples)
+    .dependsOn(cluster).dependsOn(core)
 
   def AssembledProject(name: String, deps: Seq[ModuleID]): Project =
     Project(
       id = name,
-      base = file(Settings.projectName + "-" + name),
+      base = file("continuum-" + name),
       dependencies = List(
         cqrs % "compile;runtime->runtime;test->test;it->it,test;it;provided->provided",
         testkit % "test->test;it->it,test;"
@@ -41,11 +42,10 @@ object Build extends sbt.Build {
         libraryDependencies ++= deps
       )) configs IntegrationTest configs MultiJvm
 
-
   def LibraryProject(name: String, dependencies: Seq[ModuleID]): Project =
     Project(
       id = name,
-      base = file(Settings.projectName + "-" + name),
+      base = file("continuum-" + name),
       settings = Settings.common ++ Settings.multiJvmSettings ++ Seq(
         libraryDependencies ++= dependencies
       )) configs IntegrationTest configs MultiJvm

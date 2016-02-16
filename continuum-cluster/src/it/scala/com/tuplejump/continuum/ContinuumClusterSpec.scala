@@ -1,8 +1,9 @@
 package com.tuplejump.continuum
 
+/*
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
-import com.tuplejump.embedded.kafka.{Assertions, EmbeddedKafka}
+import com.tuplejump.embedded.kafka.EmbeddedKafka
 
 object ContinuumClusterSpec extends Assertions {
 
@@ -13,12 +14,12 @@ object ContinuumClusterSpec extends Assertions {
   val topic = "simple-kafka-sample"
   val kafka = new EmbeddedKafka() // TODO in main() as expecting local or remote kafka cluster
   kafka.start()
-  eventually(10000, 100)(assert(kafka.isRunning, "Kafka must be running."))
+  await(10000, 100)(assert(kafka.isRunning, "Kafka must be running."))
   kafka.createTopic(topic, 1, 1)
 
   implicit val system: ActorSystem = ActorSystem(topic)
 
-  val cluster = ContinuumCluster(system)
+  val cluster = Kafka(system)
 
   val settings = cluster.settings
 
@@ -51,9 +52,10 @@ object ContinuumClusterSpec extends Assertions {
   Runtime.getRuntime.addShutdownHook(new Thread(s"Shutting down $topic") {
     override def run(): Unit = {
       system.terminate()
-      eventually(5000, 5000)(assert(system.whenTerminated.isCompleted, "System should be shutdown."))
+      await(5000, 5000)(assert(system.whenTerminated.isCompleted, "System should be shutdown."))
       kafka.shutdown()
     }
   })
 
 }
+*/

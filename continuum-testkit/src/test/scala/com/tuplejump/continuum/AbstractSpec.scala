@@ -19,25 +19,9 @@ package com.tuplejump.continuum
 import org.scalatest._
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Awaitable}
-import scala.util.control.NoStackTrace
-
 /** Basic unit test abstraction. */
 trait AbstractSpec extends WordSpecLike with TestHelper
   with Matchers with BeforeAndAfter with BeforeAndAfterAll with Eventually
 
 trait FunctionalSpec extends Suite with FreeSpecLike
   with Matchers with BeforeAndAfter with BeforeAndAfterAll with Eventually
-
-trait TestHelper {
-
-  final val timeoutDuration = 10.seconds
-
-  implicit class AwaitHelper[T](awaitable: Awaitable[T]) {
-    def await: T = Await.result(awaitable, timeoutDuration)
-  }
-
-  val failure = new Exception("boom") with NoStackTrace
-
-}

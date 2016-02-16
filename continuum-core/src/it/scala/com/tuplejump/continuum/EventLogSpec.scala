@@ -2,6 +2,7 @@ package com.tuplejump.continuum
 
 import java.io.File
 
+import scala.concurrent.duration._
 import akka.actor._
 import akka.pattern.ask
 import akka.testkit._
@@ -83,7 +84,7 @@ object EventLogLifecycleLeveldb {
   }
 
   class TestEventLog(id: String) extends LeveldbEventLog(id, "log-test")
-    with TestEventLogLifecycle.TestEventLog with TestHelper {
+    with TestHelper with TestEventLogLifecycle.TestEventLog {
 
     def error: Exception = failure
 
@@ -159,7 +160,7 @@ class RestarterActor(props: Props, name: Option[String]) extends Actor with Acto
 object RestarterActor extends TestHelper {
   case object Restart
 
-  implicit val timeout: Timeout = Timeout(timeoutDuration)
+  implicit val timeout: Timeout = Timeout(10.seconds)
 
   def restartActor(restarterRef: ActorRef): ActorRef =
     (restarterRef ? Restart).mapTo[ActorRef].await
