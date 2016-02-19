@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.Await
 import akka.actor._
-import akka.util.Timeout
 
 /**
   * {{{
@@ -41,7 +40,7 @@ object Kafka extends ExtensionId[Kafka] with ExtensionIdProvider {
 
 }
 
-final class Kafka(val system: ExtendedActorSystem) extends Extension with StringConverter { extension =>
+final class Kafka(val system: ExtendedActorSystem) extends Extension { extension =>
 
   import akka.pattern.ask
   import ClusterProtocol._,InternalProtocol._
@@ -50,23 +49,19 @@ final class Kafka(val system: ExtendedActorSystem) extends Extension with String
 
   system.registerOnTermination(shutdown())
 
-  protected val log = akka.event.Logging(system, "Kafka")
+  private val log = akka.event.Logging(system, "Kafka")
 
-  protected val _isRunning = new AtomicBoolean(false)
-
-  protected val _isTerminated = new AtomicBoolean(false)
+  private val _isRunning = new AtomicBoolean(false)
 
   val settings = new KafkaSettings(system.settings.config)
   import settings._
 
-  private [continuum] val guardian: ActorRef =
-    system.actorOf(Props(new NodeGuardian(settings)))
+  private val guardian = system.actorOf(Props(new NodeGuardian(settings)))
 
   log.info("Starting node")
   _isRunning.set(true)
 
   def isRunning: Boolean = _isRunning.get
-
 
   /** Uses the default producer from provided configuration.
     * If the producer has already been created, that instance is used,
@@ -78,16 +73,15 @@ final class Kafka(val system: ExtendedActorSystem) extends Extension with String
     * }}}
     *
     * TODO partition key as typed vs string
+    *
+    * @param event the event to send to Kafka.
     */
-  def log(data: String, topic: String, partition: Option[String] = None): Unit =
-    log(SourceEvent(classOf[String], to(data), topic, partition))
-
   def log(event: SourceEvent): Unit =
     guardian ! event
 
   /** Creates if not yet created, returns the default producer vs create a new one. */
   def source: ActorRef =
-    request(GetDefaultSource)
+    await(GetDefaultSource)
 
   /** Configures and creates a new producer if `config` is not empty.
     * Returns the default producer with no additional config, other than
@@ -102,19 +96,19 @@ final class Kafka(val system: ExtendedActorSystem) extends Extension with String
     * }}}
     */
   def source(config: Map[String,String]): ActorRef =
-    request(CreateSource(config))
+    await(CreateSource(config))
 
   /** Configures and creates a new consumer. Blocks during creation. */
   def sink(topics: Set[String], consumers: ActorRef*)
           (implicit config: Map[String,String] = Map.empty): ActorRef =
-    request(CreateSink(topics, consumers.toSeq, config))
+    await(CreateSink(topics, consumers.toSeq, config))
 
   /** Shuts down the consumer. */
   def unsubscribe(target: ActorRef): Unit =
     guardian ! Unsubscribe(target)
 
   /** INTERNAL API. */
-  private def request(resource: ResourceCommand): ActorRef =
+  private def await(resource: ResourceCommand): ActorRef =
     Await.result((guardian ? resource).mapTo[ActorRef], timeout.duration)
 
   /** Shutdown is triggered automatically on [[akka.actor.ActorSystem.terminate()]]. */

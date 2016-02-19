@@ -23,9 +23,10 @@ import com.tuplejump.continuum._
 import com.tuplejump.continuum.ClusterProtocol._
 
 /** Simulates two nodes on different servers (not yet on multi-jvm simulation: Roadmap).
-  * The [[IngestionApp]] would be receiving external data to ingest and process on a cluster.
-  * The [[AnalyticsApp]] would be one of many sink (subscriber) and source (publisher)
-  * applications deployed on a cluster. Receiving data from topic streams, processing, etc.
+  * The runnable is [[KafkaExampleSimple]] which starts the others in different threads.
+  *
+  * Publishes to Kafka at:
+  *   interval = 300.millis, burstSize = 1000, totalSize = 100000, Example.topics
   *
   * 1. Prerequisites: You must either have a local Zookeeper and Kafka server
   * running, or configure the necessary connection configurations to connect to
@@ -71,7 +72,7 @@ object KafkaExampleSimple extends App {
   }.start()
 }
 
-object IngestionApp extends Logging {
+private object IngestionApp extends Logging {
 
   def main(args: Array[String]): Unit = {
     val system = Node.create("MicroserviceA", args(0).toInt)
@@ -87,12 +88,12 @@ object IngestionApp extends Logging {
     val microservice = new BiddingServer(eventLog)
     logger.info("Ingestion node started")
 
-    val simulation = Example.Simulation(300.millis, 1000, 100000)
+    val simulation = Example.Simulation(300.millis, 1000, 100000, Example.topics)
     Node.run(simulation, kafka.settings, system, microservice)
   }
 }
 
-object AnalyticsApp {
+private object AnalyticsApp {
 
   def main(args: Array[String]): Unit = {
     val system = Node.create("AnalyticsApp", args(0).toInt)
@@ -112,7 +113,7 @@ object AnalyticsApp {
   }
 }
 
-final class EventLogger(kafka: Kafka) extends EventLogKafka(kafka) {
+private final class EventLogger(kafka: Kafka) extends EventLogKafka(kafka) {
   import Example.BidRequest
 
   override def log(event: AnyRef): Unit =
@@ -156,21 +157,20 @@ object Subscriber {
   */
 class Subscriber extends Actor with ActorLogging with StringConverter {
   def receive: Actor.Receive = {
-    case SinkEvent(_, data, _, topic,_) => process(data)
+    case SinkEvent(_, data, offset, topic,_) => process(data, offset, topic)
   }
 
   /** Proceed with your custom processing streams. */
-  private def process(data: Array[Byte]): Unit = {
-    log.info("Received {}", from(data))
+  private def process(bytes: Array[Byte], offset: Long, topic: String): Unit = {
+    log.info("Received {} from {} at {}", from(bytes), topic, offset)
   }
 }
-
 
 object Example {
 
   val topics = Set(BidRequest.to)
 
-  final case class Simulation(interval: FiniteDuration, burstSize: Int, totalSize: Int)
+  final case class Simulation(interval: FiniteDuration, burstSize: Int, totalSize: Int, topics: Set[String])
   final case class BidRequest(json: String) extends Serializable
 
   object BidRequest extends StringConverter {

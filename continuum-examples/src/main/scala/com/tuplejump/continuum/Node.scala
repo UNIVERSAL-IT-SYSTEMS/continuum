@@ -50,7 +50,7 @@ object Node extends LocalRemote with Assertions {
 
     import system.dispatcher
 
-    topicLifecycle(settings, Example.topics)
+    topicLifecycle(settings.KafkaZookeeperConnect, Example.topics)
 
     /* Creates the simulation data. Strings only (this week). */
     def burst: Iterator[IndexedSeq[BidRequest]] = {
@@ -69,16 +69,13 @@ object Node extends LocalRemote with Assertions {
 
   /** Creates topic in Kafka and removes during shutdown. In prod the topic would already
     * exists and be configured with the appropriate security, partitioning, etc.
-    *
-    * @param settings the settings read in load-time
-    * @param topics the topics to subscribe and unsubscribe
     */
-  def topicLifecycle(settings: KafkaSettings, topics: Set[String]): Unit = {
+  def topicLifecycle(zookeeperConnect: String, topics: Set[String]): Unit = {
     import kafka.admin.AdminUtils
     import kafka.common.{TopicAlreadyMarkedForDeletionException, TopicExistsException}
     import kafka.utils.ZkUtils
 
-    val zk = ZkUtils(settings.KafkaZookeeperConnect, 6000, 6000, false)
+    val zk = ZkUtils(zookeeperConnect, 6000, 6000, false)
 
     topics foreach { topic =>
       try {
